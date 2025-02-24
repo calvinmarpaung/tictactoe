@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Configurable Tic Tac Toe</title>
+    <style>
+        .board {
+            display: grid;
+            gap: 2px;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div id="gameContainer">
+    <div>
+        <label for="boardSize">Board Size:</label>
+        <input type="number" id="boardSize" min="3" value="3">
+        <button onclick="startNewGame()">New Game</button>
+    </div>
+    <div id="status"></div>
+    <div id="board" class="board"></div>
+</div>
+
+<script>
+    let game;
+
+    async function startNewGame() {
+        const size = document.getElementById('boardSize').value;
+        const response = await fetch(`/api/game/new?size=${size}`, {
+            method: 'POST'
+        });
+        game = await response.json();
+        renderBoard();
+        updateStatus();
+    }
+
+    async function makeMove(row, col) {
+        if (!game || game.status !== 'IN_PROGRESS') return;
+
+        const response = await fetch('/api/game/move', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ row, col })
+        });
+        game = await response.json();
+        renderBoard();
+        updateStatus();
+    }
+
+    function renderBoard() {
+        const board = document.getElementById('board');
+        const size = game.board.size;
+        board.style.gridTemplateColumns = `repeat(${size}, 50px)`;
+        board.innerHTML = '';
+
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = game.board.grid[i][j];
+                cell.onclick = () => makeMove(i, j);
+                board.appendChild(cell);
+            }
+        }
+    }
+
+    function updateStatus() {
+        const statusDiv = document.getElementById('status');
+        if (game.status === 'WON') {
+            statusDiv.textContent = `${game.winner} wins!`;
+        } else if (game.status === 'DRAW') {
+            statusDiv.textContent = "It's a draw!";
+        } else {
+            statusDiv.textContent = `Current player: ${game.currentPlayer.name} (${game.currentPlayer.symbol})`;
+        }
+    }
+
+    // Start a new game when the page loads
+    window.onload = () => startNewGame();
+</script>
+</body>
+</html>
